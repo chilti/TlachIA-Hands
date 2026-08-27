@@ -47,7 +47,6 @@ echo "🧹 Deteniendo contenedor previo si existe..."
 $DOCKER_CMD rm -f tlachia-hands 2>/dev/null || true
 
 # SANDBOX_VOLUMES: path absoluto del host que el sandbox runtime montará como /workspace
-# Incluye workspace completo con .openhands_instructions y .openhands/microagents/
 SANDBOX_VOLUMES="${WORKSPACE_DIR}:/workspace:rw"
 SANDBOX_VOLUMES="${SANDBOX_VOLUMES},/home/sinapsisai/data:/workspace/data:ro"
 
@@ -59,7 +58,9 @@ $DOCKER_CMD run -d \
   -p 3000:8000 \
   -v /var/run/docker.sock:/var/run/docker.sock \
   -v "$SCRIPT_DIR/mcp_config.json":/app/mcp_config.json:ro \
+  -v "$WORKSPACE_DIR":/projects \
   -v "$WORKSPACE_DIR":/workspace \
+  -v "$STATE_DIR":/home/openhands/.openhands \
   -v "$STATE_DIR":/.openhands-state \
   -v "$STATE_DIR":/.openhands \
   -v /home/sinapsisai:/home/sinapsisai \
@@ -68,7 +69,7 @@ $DOCKER_CMD run -d \
   -e SANDBOX_RUNTIME_CONTAINER_IMAGE=ghcr.io/all-hands-ai/runtime:latest \
   -e SANDBOX_VOLUMES="$SANDBOX_VOLUMES" \
   -e DOCKER_HOST_ADDR=172.17.0.1 \
-  -e FILE_STORE_PATH=/.openhands-state \
+  -e FILE_STORE_PATH=/home/openhands/.openhands \
   -e LLM_MODEL=openai/default \
   -e LLM_BASE_URL=http://172.17.0.1:1234/v1 \
   -e LLM_API_KEY=sk-lm-VAulEVEi:bZFVZZK3oGOxDI4gJcV1 \
@@ -82,7 +83,7 @@ echo ""
 echo "========================================================================"
 echo "✅ TLACHIA-HANDS ESTÁ ACTIVO EN MODO STDIO"
 echo "   Modelo LLM: openai/default @ http://172.17.0.1:1234/v1"
-echo "   Estado: $STATE_DIR (persistente entre reinicios)"
+echo "   Estado: $STATE_DIR"
 echo "🌐 URL en el Navegador: http://localhost:3000/canvas"
 echo "🌐 Interfaz principal : http://localhost:3000/"
 echo "========================================================================"
