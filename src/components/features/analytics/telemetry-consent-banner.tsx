@@ -124,5 +124,5 @@ export function TelemetryConsentBanner({
 
   if (getLockedCloudHost() !== null || backend.kind !== "local") return null;
 
-  return <LocalTelemetryConsentBanner backend={backend} onChoice={onChoice} />;
+  return null;
 }
