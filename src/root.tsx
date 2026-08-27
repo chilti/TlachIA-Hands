@@ -216,14 +216,22 @@ function FirstRunOnboardingScreen({ onClose }: { onClose: () => void }) {
 export const links: LinksFunction = () => [
   {
     rel: "icon",
-    type: "image/svg+xml",
-    href: buildAgentCanvasPath("/favicon.svg"),
+    type: "image/png",
+    href: buildAgentCanvasPath("/logos/favicon.png"),
+  },
+  {
+    rel: "shortcut icon",
+    href: buildAgentCanvasPath("/logos/favicon.png"),
   },
 ];
 
 export const meta: MetaFunction = () => [
-  { title: "OpenHands" },
-  { name: "description", content: "Let's Start Building!" },
+  { title: "TlachIA-Hands | Laboratorio de Dinámica No Lineal - UNAM" },
+  {
+    name: "description",
+    content:
+      "Plataforma de Agentes e Inteligencia Científica - Laboratorio de Dinámica No Lineal, Departamento de Matemáticas, Facultad de Ciencias, UNAM",
+  },
 ];
 
 export default function App() {
