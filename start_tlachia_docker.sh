@@ -8,9 +8,23 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
+# Directorios persistentes propios de TlachIA-Hands
+WORKSPACE_DIR="$SCRIPT_DIR/openhands_workspace"
+STATE_DIR="/home/jlja/.tlachia-state"
+mkdir -p "$WORKSPACE_DIR/.openhands/microagents"
+mkdir -p "$WORKSPACE_DIR/.agents/skills"
+mkdir -p "$STATE_DIR"
+
+# Sincronizar microagentes y skills al workspace
+echo "📂 Sincronizando microagentes y skills al workspace..."
+cp "$SCRIPT_DIR/.openhands_instructions" "$WORKSPACE_DIR/.openhands_instructions" 2>/dev/null || true
+cp -r "$SCRIPT_DIR/.openhands/microagents/." "$WORKSPACE_DIR/.openhands/microagents/" 2>/dev/null || true
+cp -r "$SCRIPT_DIR/.agents/skills/." "$WORKSPACE_DIR/.agents/skills/" 2>/dev/null || true
+
 echo "========================================================================"
 echo "🚀 INICIANDO TLACHIA-HANDS (Laboratorio de Dinámica No Lineal - UNAM)"
 echo "   Modo MCP: Directo (stdio con Python /home/ambientesPy/revistaslatam)"
+echo "   Estado persistente: $STATE_DIR"
 echo "========================================================================"
 
 # 1. Verificar permisos Docker
@@ -32,6 +46,11 @@ fi
 echo "🧹 Deteniendo contenedor previo si existe..."
 $DOCKER_CMD rm -f tlachia-hands 2>/dev/null || true
 
+# SANDBOX_VOLUMES: path absoluto del host que el sandbox runtime montará como /workspace
+# Incluye workspace completo con .openhands_instructions y .openhands/microagents/
+SANDBOX_VOLUMES="${WORKSPACE_DIR}:/workspace:rw"
+SANDBOX_VOLUMES="${SANDBOX_VOLUMES},/home/sinapsisai/data:/workspace/data:ro"
+
 # 4. Iniciar contenedor TlachIA-Hands en puerto 3000 con soporte stdio
 echo "🌟 Arrancando contenedor 'tlachia-hands'..."
 $DOCKER_CMD run -d \
@@ -40,20 +59,30 @@ $DOCKER_CMD run -d \
   -p 3000:8000 \
   -v /var/run/docker.sock:/var/run/docker.sock \
   -v "$SCRIPT_DIR/mcp_config.json":/app/mcp_config.json:ro \
-  -v "$SCRIPT_DIR/mcp_config.json":/.openhands/mcp_config.json:ro \
-  -v "$SCRIPT_DIR/.agents/skills":/workspace/.agents/skills:ro \
-  -v "$SCRIPT_DIR/.agents/skills":/workspace/skills:ro \
-  -v "$SCRIPT_DIR/.agents/skills":/.agents/skills:ro \
+  -v "$WORKSPACE_DIR":/workspace \
+  -v "$STATE_DIR":/.openhands-state \
+  -v "$STATE_DIR":/.openhands \
+  -v /home/sinapsisai:/home/sinapsisai \
   -v /mnt/expansion:/mnt/expansion \
   -v /home/ambientesPy:/home/ambientesPy \
-  -v /home/sinapsisai:/home/sinapsisai \
   -e SANDBOX_RUNTIME_CONTAINER_IMAGE=ghcr.io/all-hands-ai/runtime:latest \
+  -e SANDBOX_VOLUMES="$SANDBOX_VOLUMES" \
+  -e DOCKER_HOST_ADDR=172.17.0.1 \
+  -e FILE_STORE_PATH=/.openhands-state \
+  -e LLM_MODEL=openai/default \
+  -e LLM_BASE_URL=http://172.17.0.1:1234/v1 \
+  -e LLM_API_KEY=sk-lm-VAulEVEi:bZFVZZK3oGOxDI4gJcV1 \
+  -e CUSTOM_LLM_PROVIDER=openai \
+  -e LLM_TEMPERATURE=0.0 \
+  -e LLM_MAX_OUTPUT_TOKENS=4096 \
   -e LOG_ALL_EVENTS=true \
   tlachia-hands:latest
 
 echo ""
 echo "========================================================================"
 echo "✅ TLACHIA-HANDS ESTÁ ACTIVO EN MODO STDIO"
+echo "   Modelo LLM: openai/default @ http://172.17.0.1:1234/v1"
+echo "   Estado: $STATE_DIR (persistente entre reinicios)"
 echo "🌐 URL en el Navegador: http://localhost:3000/canvas"
 echo "🌐 Interfaz principal : http://localhost:3000/"
 echo "========================================================================"
