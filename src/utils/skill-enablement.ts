@@ -1,10 +1,26 @@
 import {
-  DEFAULT_ENABLED_SKILL_NAMES,
-  SKILLS_CATALOG,
+  DEFAULT_ENABLED_SKILL_NAMES as BASE_ENABLED_SKILL_NAMES,
+  SKILLS_CATALOG as BASE_SKILLS_CATALOG,
 } from "@openhands/extensions/skills";
+import {
+  TLACHIA_SKILLS_CATALOG,
+  TLACHIA_SKILL_NAMES,
+} from "#/catalog/tlachia-skills";
 
-/** Every skill bundled from `@openhands/extensions`, in catalog order. */
-export const CATALOG_SKILL_NAMES: readonly string[] = SKILLS_CATALOG.map(
+/** All skills from TlachIA + bundled @openhands/extensions */
+export const ALL_SKILLS_CATALOG = [
+  ...TLACHIA_SKILLS_CATALOG,
+  ...BASE_SKILLS_CATALOG,
+];
+
+/** Default enabled skills include all 14 TlachIA skills plus base defaults */
+export const DEFAULT_ENABLED_SKILL_NAMES: readonly string[] = [
+  ...TLACHIA_SKILL_NAMES,
+  ...BASE_ENABLED_SKILL_NAMES,
+];
+
+/** Every skill bundled in catalog order. */
+export const CATALOG_SKILL_NAMES: readonly string[] = ALL_SKILLS_CATALOG.map(
   (entry) => entry.name,
 );
 
@@ -101,7 +117,7 @@ export function toSkillEnablement(settings: {
 // `triggers` (what an automation card fills in — see `findAutomationCommand`),
 // and `/<skill-name>`, which the detail modal's "Use skill" button inserts.
 const CATALOG_SKILL_BY_SLASH_COMMAND = new Map(
-  SKILLS_CATALOG.flatMap((entry) =>
+  ALL_SKILLS_CATALOG.flatMap((entry) =>
     [
       `/${entry.name}`,
       ...(entry.triggers ?? []).filter((trigger) => trigger.startsWith("/")),

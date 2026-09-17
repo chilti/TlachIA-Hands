@@ -20,14 +20,29 @@ echo "🚀 INICIANDO TLACHIA-HANDS (Laboratorio de Dinámica No Lineal - UNAM)"
 echo "   Estado persistente: $STATE_DIR"
 echo "========================================================================"
 
-# 1. Verificar permisos Docker
+# 1. Verificar permisos Docker y asegurar microservicios MCP
 DOCKER_CMD="docker"
 if ! docker ps >/dev/null 2>&1; then
     echo "🔑 Solicitando privilegios de sudo para Docker..."
     DOCKER_CMD="sudo docker"
 fi
 
-# 2. Construir la imagen con network host para resolución DNS confiable
+echo "📡 Iniciando/verificando microservicios científicos MCP (sos-mcp-services)..."
+if [ -f "/mnt/expansion/desplegados/sos-mcp-services/docker-compose.yml" ]; then
+    $DOCKER_CMD compose -f /mnt/expansion/desplegados/sos-mcp-services/docker-compose.yml up -d
+fi
+
+# 2. Sincronizar configuración de LLM y catálogo de skills
+echo "🧠 Sincronizando perfiles LLM locales desde .env..."
+if [ -x /home/ambientesPy/revistaslatam/bin/python ]; then
+    /home/ambientesPy/revistaslatam/bin/python scripts/seed_tlachia_llm.py
+elif command -v python3 >/dev/null 2>&1; then
+    python3 scripts/seed_tlachia_llm.py
+fi
+
+echo "📚 Generando catálogo de skills científicos..."
+node scripts/build-skills-catalog.mjs
+
 echo "📦 Construyendo/actualizando imagen Docker 'tlachia-hands:latest'..."
 if [ -f "scripts/docker-build.mjs" ]; then
     node scripts/docker-build.mjs --tag tlachia-hands:latest -- --network=host
@@ -45,6 +60,8 @@ $DOCKER_CMD run -d \
   --name tlachia-hands \
   --restart unless-stopped \
   -p 3000:8000 \
+  --add-host host.docker.internal:host-gateway \
+  --env-file .env \
   -v /var/run/docker.sock:/var/run/docker.sock \
   -v "$STATE_DIR":/home/openhands/.openhands \
   -v /mnt/expansion/desplegados:/projects \

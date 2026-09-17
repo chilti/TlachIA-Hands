@@ -1,6 +1,7 @@
 import { ACP_SETTINGS_KEYS } from "@openhands/typescript-client";
 import { ServerClient } from "@openhands/typescript-client/clients";
 import { SKILLS_CATALOG } from "@openhands/extensions/skills";
+import { TLACHIA_SKILLS_CATALOG } from "#/catalog/tlachia-skills";
 import { DEFAULT_SETTINGS } from "#/services/settings";
 import { ExecutionStatus } from "#/types/agent-server/core";
 import { AgentKind, Settings, SettingsValue } from "#/types/settings";
@@ -726,7 +727,8 @@ interface BundledSkill {
  * Skills with no triggers get `trigger: null` (always-active / on-demand).
  */
 function buildBundledSkills(): BundledSkill[] {
-  return SKILLS_CATALOG.map((entry) => {
+  const allCatalog = [...TLACHIA_SKILLS_CATALOG, ...SKILLS_CATALOG];
+  return allCatalog.map((entry) => {
     const trigger: BundledSkill["trigger"] =
       entry.triggers?.length > 0
         ? { type: "keyword", keywords: entry.triggers }

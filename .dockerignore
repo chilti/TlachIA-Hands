@@ -8,9 +8,10 @@ dist/
 # Development files
 .git/
 .github/
-.openhands/
 .agents/
-.pr/
+!.agents/skills/
+.openhands/
+
 
 # Test files
 __tests__/

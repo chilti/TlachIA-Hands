@@ -2,6 +2,35 @@ import { Settings } from "#/types/settings";
 
 export const LATEST_SETTINGS_VERSION = 5;
 
+export const DEFAULT_TLACHIA_MCP_CONFIG = {
+  sos_knomap: {
+    transport: "sse",
+    url: "http://172.17.0.1:8010/sse",
+  },
+  sos_sinapsisai: {
+    transport: "sse",
+    url: "http://172.17.0.1:8011/sse",
+  },
+  sos_plmetrix: {
+    transport: "sse",
+    url: "http://172.17.0.1:8012/sse",
+  },
+  sos_revistaslatam: {
+    transport: "sse",
+    url: "http://172.17.0.1:8013/sse",
+  },
+  sos_topics: {
+    transport: "sse",
+    url: "http://172.17.0.1:8014/sse",
+  },
+  sos_openalex: {
+    transport: "sse",
+    url: "http://172.17.0.1:8015/sse",
+  },
+};
+
+
+
 export const DEFAULT_SETTINGS: Settings = {
   llm_model: "openai/gpt-5.6-sol",
   llm_base_url: "",
@@ -24,7 +53,7 @@ export const DEFAULT_SETTINGS: Settings = {
   search_api_key: "",
   is_new_user: true,
   disabled_skills: [],
-  mcp_config: {},
+  mcp_config: DEFAULT_TLACHIA_MCP_CONFIG,
   max_budget_per_task: null,
   email: "",
   email_verified: true,
@@ -49,7 +78,7 @@ export const DEFAULT_SETTINGS: Settings = {
     },
     enable_sub_agents: false,
     enable_switch_llm_tool: true,
-    mcp_config: {},
+    mcp_config: DEFAULT_TLACHIA_MCP_CONFIG,
   },
   conversation_settings_schema: null,
   conversation_settings: {

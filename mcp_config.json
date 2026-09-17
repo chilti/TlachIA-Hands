@@ -1,64 +1,26 @@
 {
-  "mcpServers": {
-    "sos_knomap": {
-      "command": "/home/ambientesPy/revistaslatam/bin/python",
-      "args": [
-        "/mnt/expansion/desplegados/sos-mcp-services/services/knomap/mcp_server.py"
-      ],
-      "env": {
-        "PYTHONPATH": "/home/sinapsisai/python_packages:/mnt/expansion/desplegados/sos-mcp-services:/home/labsom/knomap:/mnt/expansion/desplegados/revistaslatam:/mnt/expansion/desplegados/Topics:/mnt/expansion/desplegados/openalex-elastic-clickhouse-api:/home/sinapsisai",
-        "MCP_TRANSPORT": "stdio"
-      }
-    },
-    "sos_sinapsisai": {
-      "command": "/home/ambientesPy/revistaslatam/bin/python",
-      "args": [
-        "/mnt/expansion/desplegados/sos-mcp-services/services/sinapsisai/mcp_server.py"
-      ],
-      "env": {
-        "PYTHONPATH": "/home/sinapsisai/python_packages:/mnt/expansion/desplegados/sos-mcp-services:/home/labsom/knomap:/mnt/expansion/desplegados/revistaslatam:/mnt/expansion/desplegados/Topics:/mnt/expansion/desplegados/openalex-elastic-clickhouse-api:/home/sinapsisai",
-        "MCP_TRANSPORT": "stdio"
-      }
-    },
-    "sos_plmetrix": {
-      "command": "/home/ambientesPy/revistaslatam/bin/python",
-      "args": [
-        "/mnt/expansion/desplegados/sos-mcp-services/services/plmetrix/mcp_server.py"
-      ],
-      "env": {
-        "PYTHONPATH": "/home/sinapsisai/python_packages:/mnt/expansion/desplegados/sos-mcp-services:/home/labsom/knomap:/mnt/expansion/desplegados/revistaslatam:/mnt/expansion/desplegados/Topics:/mnt/expansion/desplegados/openalex-elastic-clickhouse-api:/home/sinapsisai",
-        "MCP_TRANSPORT": "stdio"
-      }
-    },
-    "sos_revistaslatam": {
-      "command": "/home/ambientesPy/revistaslatam/bin/python",
-      "args": [
-        "/mnt/expansion/desplegados/sos-mcp-services/services/revistaslatam/mcp_server.py"
-      ],
-      "env": {
-        "PYTHONPATH": "/home/sinapsisai/python_packages:/mnt/expansion/desplegados/sos-mcp-services:/home/labsom/knomap:/mnt/expansion/desplegados/revistaslatam:/mnt/expansion/desplegados/Topics:/mnt/expansion/desplegados/openalex-elastic-clickhouse-api:/home/sinapsisai",
-        "MCP_TRANSPORT": "stdio"
-      }
-    },
-    "sos_topics": {
-      "command": "/home/ambientesPy/revistaslatam/bin/python",
-      "args": [
-        "/mnt/expansion/desplegados/sos-mcp-services/services/topics/mcp_server.py"
-      ],
-      "env": {
-        "PYTHONPATH": "/home/sinapsisai/python_packages:/mnt/expansion/desplegados/sos-mcp-services:/home/labsom/knomap:/mnt/expansion/desplegados/revistaslatam:/mnt/expansion/desplegados/Topics:/mnt/expansion/desplegados/openalex-elastic-clickhouse-api:/home/sinapsisai",
-        "MCP_TRANSPORT": "stdio"
-      }
-    },
-    "sos_openalex": {
-      "command": "/home/ambientesPy/revistaslatam/bin/python",
-      "args": [
-        "/mnt/expansion/desplegados/sos-mcp-services/services/openalex/mcp_server.py"
-      ],
-      "env": {
-        "PYTHONPATH": "/home/sinapsisai/python_packages:/mnt/expansion/desplegados/sos-mcp-services:/home/labsom/knomap:/mnt/expansion/desplegados/revistaslatam:/mnt/expansion/desplegados/Topics:/mnt/expansion/desplegados/openalex-elastic-clickhouse-api:/home/sinapsisai",
-        "MCP_TRANSPORT": "stdio"
-      }
-    }
+  "sos_knomap": {
+    "transport": "sse",
+    "url": "http://172.17.0.1:8010/sse"
+  },
+  "sos_sinapsisai": {
+    "transport": "sse",
+    "url": "http://172.17.0.1:8011/sse"
+  },
+  "sos_plmetrix": {
+    "transport": "sse",
+    "url": "http://172.17.0.1:8012/sse"
+  },
+  "sos_revistaslatam": {
+    "transport": "sse",
+    "url": "http://172.17.0.1:8013/sse"
+  },
+  "sos_topics": {
+    "transport": "sse",
+    "url": "http://172.17.0.1:8014/sse"
+  },
+  "sos_openalex": {
+    "transport": "sse",
+    "url": "http://172.17.0.1:8015/sse"
   }
 }
