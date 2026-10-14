@@ -7,281 +7,79 @@ import type { SkillCatalogEntry } from "@openhands/extensions/skills";
 
 export const TLACHIA_SKILLS_CATALOG: SkillCatalogEntry[] = [
   {
-    "name": "bibliometric-network-analyst",
-    "description": "Experto en construcción y análisis de redes bibliométricas (coautoría, co-ocurrencia, co-citación, acoplamiento bibliográfico) y partición Louvain.",
+    "name": "openalex-mexico-aggregations",
+    "description": "Agregaciones analíticas instantáneas sobre la producción científica de México en ClickHouse (rag.works_academic_all), calculando distribución por vías de acceso abierto (Diamond vs Gold APC), gasto comercial en APC en USD, publicaciones de élite Top 10% mundial, FWCI promedio y series cronológicas.",
     "category": "scientometrics",
     "triggers": [
-      "/bibliometric-network-analyst",
-      "red de coautoría",
-      "red bibliométrica",
-      "coautoría",
-      "co-citación",
-      "acoplamiento bibliográfico",
-      "bibliographic coupling",
-      "louvain",
-      "bibliometric network",
-      "coauthorship network"
+      "/openalex-mexico-aggregations"
     ],
-    "content": "# Skill: Bibliometric Network Analyst\n\n## 1. Propósito y Activación\nSe activa para procesar exportaciones bibliográficas (WoS, Scopus, PubMed, OpenAlex) y generar redes compatibles con VOSviewer / Pajek.\n\n## 2. Tipologías de Red Soportadas\n- **Co-ocurrencia de Keywords:** Estructura conceptual y frentes temáticos.\n- **Coautoría:** Estructura social y redes de colaboración científica.\n- **Co-citación:** Estructura intelectual y colegios invisibles.\n- **Acoplamiento Bibliográfico (Bibliographic Coupling):** Frente de investigación activo.\n\n## 3. Protocolo de Invocación MCP\n1. Invocar `knomap-som-engine -> parse_bibliographic_file` con método de conteo fraccional o completo.\n2. Invocar `knomap-som-engine -> detect_louvain_communities` con control de resolución modular.",
+    "content": "# OpenAlex México Aggregations\n\nMotor de agregación columnar para la evaluación cuantitativa de la producción científica en México a escala masiva sin transferir registros individuales.\n\n## Overview\n\nCalcula métricas e indicadores de impacto, gasto editorial y modelos de publicación agrupados por cualquier dimensión cienciométrica (año, vía OA, subcampo, disciplina o país), respondiendo en milisegundos gracias al motor MergeTree de ClickHouse.\n\n## Dependencies\n\n- **Entorno Python:** `/home/ambientesPy/revistaslatam`\n- **Script CLI:** [`scripts/openalex_mexico_cli.py`](file:///mnt/expansion/desplegados/sos-mcp-services/.agents/skills/openalex-mexico-clickhouse/openalex-mexico-aggregations/scripts/openalex_mexico_cli.py)\n- **Tabla ClickHouse:** `rag.works_academic_all`\n\n## CLI Interface\n\n### 1. Desglose de Vías de Acceso Abierto y Gasto en APC\nCuantifica la penetración de las 6 vías y calcula el gasto comercial total en USD:\n```bash\n/home/ambientesPy/revistaslatam/bin/python scripts/openalex_mexico_cli.py aggregate \\\n  --group-by \"oa_status\" \\\n  --filter \"publication_year >= 2020\" \\\n  --output /ruta/a/acceso_abierto_mexico.json\n```\n\n### 2. Serie Temporal de Producción, Citas y Calidad de Impacto\nEvolución anual de publicaciones, porcentaje en el Top 10% y FWCI medio:\n```bash\n/home/ambientesPy/revistaslatam/bin/python scripts/openalex_mexico_cli.py aggregate \\\n  --group-by \"publication_year\" \\\n  --filter \"publication_year >= 2015 AND publication_year <= 2025\" \\\n  --output /ruta/a/tendencia_anual_mexico.json\n```\n\n### 3. Agrupación por Subcampo Disciplinar\nIdentifica los subcampos con mayor volumen de publicaciones y concentración de citas:\n```bash\n/home/ambientesPy/revistaslatam/bin/python scripts/openalex_mexico_cli.py aggregate \\\n  --group-by \"subfield\" \\\n  --filter \"publication_year >= 2020\" \\\n  --output /ruta/a/subcampos_mexico.json\n```\n\n### 4. Filtrado por Institución Específica\nAplica filtros por universidad usando los arrays nativos de ClickHouse:\n```bash\n/home/ambientesPy/revistaslatam/bin/python scripts/openalex_mexico_cli.py aggregate \\\n  --group-by \"oa_status\" \\\n  --filter \"has(institution_rors, 'https://ror.org/01tmp8f25') AND publication_year >= 2022\" \\\n  --output /ruta/a/oa_unam_2022_2025.json\n```\n\n### 5. Ranking de Entidades Líderes por Tema (`top-entities`)\nIdentifica con un solo comando qué **autores** o **instituciones** tienen la mayor capacidad científica (volumen, citas, FWCI y porcentaje en el Top 10% mundial) en un tema estratégico (ej. litio, celdas solares, grafeno):\n\n**Para Instituciones líderes:**\n```bash\n/home/ambientesPy/revistaslatam/bin/python scripts/openalex_mexico_cli.py top-entities \\\n  --query \"lithium\" \\\n  --by \"institutions\" \\\n  --limit 10 \\\n  --output /ruta/a/top_instituciones_litio.json\n```\n\n**Para Investigadores líderes (con resolución de nombres y ORCID):**\n```bash\n/home/ambientesPy/revistaslatam/bin/python scripts/openalex_mexico_cli.py top-entities \\\n  --query \"lithium\" \\\n  --by \"authors\" \\\n  --limit 10 \\\n  --output /ruta/a/top_investigadores_litio.json\n```\n\n## Salida Estructurada\n\nCada registro agrupado devuelve de forma automática:\n- `dimension`: Valor de la categoría agrupada (ej. `diamond`, `2024`, etc.).\n- `total_works`: Conteo absoluto de publicaciones.\n- `total_citations`: Citas acumuladas globales.\n- `avg_fwci`: Promedio del impacto normalizado por campo.\n- `pct_top_10`: Porcentaje de artículos en el 10% más citado del mundo.\n- `total_apc_paid_usd`: Suma del gasto comercial estimado en cargos APC (USD).\n\n## Protocolo Obligatorio para Temas Generales (IA, Nanotecnología, Biotecnología)\n\nCuando la consulta del usuario se refiera a un área sombrilla o disciplina amplia (ej. *\"Inteligencia Artificial\"*, *\"Biotecnología\"*, *\"Energías Renovables\"*), **NUNCA ejecutes `top-entities` directamente con el término general**. Sigue estrictamente este procedimiento en 2 fases para modelos locales con ventanas acotadas:\n\n### Fase 1: Descubrimiento Taxonómico en ClickHouse (Data-Driven Taxonomy)\nEjecuta la agregación agrupando por tópicos para descubrir cuáles son las especialidades reales con producción científica en México:\n```bash\n/home/ambientesPy/revistaslatam/bin/python scripts/openalex_mexico_cli.py aggregate \\\n  --group-by \"topic\" \\\n  --filter \"subfield = 'Artificial Intelligence'\" \\\n  --output /ruta/a/especialidades_ia.json\n```\nInspecciona los primeros resultados de salida para identificar los 3 a 5 tópicos dominantes (ej. *Metaheuristic Optimization*, *Neural Networks*, *Natural Language Processing*, *Fuzzy Logic*).\n\n### Fase 2: Evaluación de Capacidad por Especialidad Específica\nCon los tópicos reales descubiertos en la Fase 1, ejecuta `top-entities` para cada especialidad concreta:\n```bash\n/home/ambientesPy/revistaslatam/bin/python scripts/openalex_mexico_cli.py top-entities \\\n  --query \"Natural Language Processing\" \\\n  --by \"authors\" \\\n  --limit 5 \\\n  --output /ruta/a/top_nlp_autores.json\n```\n\n## References\n\n- [Diccionario de Métricas y Modelo Económico APC](references/metrics_and_apc_dictionary.md)\n\n## Common Mistakes & Edge Cases\n\n- **Regla Anti-JOIN:** No intente concatenar con sentencias JOIN en el parámetro `--filter`. Los filtros deben basarse estrictamente en las columnas y arrays de `rag.works_academic_all`.\n- **Temas Sombrilla:** No busque \"Inteligencia Artificial\" en un solo paso; descomponga primero con la Fase 1 para no pasar por alto nichos de investigación nacionales.\n- **Ventana de Contexto en Modelos Locales:** El CLI siempre genera su salida en disco (`--output`). Lea únicamente los primeros registros para mantener el consumo de tokens por debajo de 500.",
     "license": "UNAM LDNL",
     "compatibility": "TlachIA-Hands / Antigravity"
   },
   {
-    "name": "classical-bibliometrics-laws",
-    "description": "Experto en modelado matemático de leyes bibliométricas clásicas (Lotka, Bradford, Zipf, Price) y fases de madurez científica.",
+    "name": "openalex-mexico-author-search",
+    "description": "Búsqueda y desambiguación de investigadoras e investigadores de México en ClickHouse local sobre las tablas materializadas rag.authors_seed_mexico (2.57M autores) y rag.academics_all, con filtros por nivel SNII, dependencia institucional y variantes de nombres hispanos.",
     "category": "scientometrics",
     "triggers": [
-      "/classical-bibliometrics-laws",
-      "ley de lotka",
-      "ley de bradford",
-      "ley de zipf",
-      "índice de price",
-      "lotka law",
-      "bradford law",
-      "bibliometric laws",
-      "leyes bibliométricas",
-      "productividad de autores"
+      "/openalex-mexico-author-search"
     ],
-    "content": "# Skill: Classical Bibliometrics Laws\n\n## 1. Propósito y Activación\nSe activa para validar hipótesis cuantitativas sobre distribuciones de productividad, dispersión de literatura y tasas de envejecimiento.\n\n## 2. Modelos y Criterios de Aceptación\n- **Ley de Lotka (Productividad de Autores):** $A_n = A_1 / n^c$. Exponente canónico $c \\approx 2.0$. Prueba Kolmogorov-Smirnov para bondad de ajuste.\n- **Ley de Bradford (Dispersión de Revistas):** División en 3 zonas de igual producción ($1 : k : k^2$). Extracción del núcleo *Core*.\n- **Índice de Price (Obsolescencia):** Porcentaje de referencias con $\\le 5$ años de antigüedad.\n- **Modelos de Crecimiento:** Comparación Exponencial vs Logístico para determinar fase de madurez.\n\n## 3. Protocolo MCP\n- `plmetrix-laws-engine -> analyze_lotka_law`\n- `plmetrix-laws-engine -> analyze_bradford_law`\n- `plmetrix-laws-engine -> analyze_price_index`\n- `plmetrix-laws-engine -> analyze_scientific_growth_phases`",
+    "content": "# OpenAlex México Author Search\n\nHabilidad especializada en la localización, desambiguación y recuperación de métricas de investigadoras e investigadores afiliados a instituciones de México en la base local de ClickHouse.\n\n## Overview\n\nPermite buscar perfiles académicos sobre el catálogo de más de 2.57 millones de autores relacionados con México (`rag.authors_seed_mexico`) y cruzar con datos del Sistema Nacional de Investigadoras e Investigadores (`rag.academics_all`), resolviendo automáticamente permutaciones de apellidos compuestos y caracteres diacríticos sin formular `JOIN`s.\n\n## Dependencies\n\n- **Entorno Python:** `/home/ambientesPy/revistaslatam`\n- **Script CLI:** [`scripts/openalex_mexico_cli.py`](file:///mnt/expansion/desplegados/sos-mcp-services/.agents/skills/openalex-mexico-clickhouse/openalex-mexico-author-search/scripts/openalex_mexico_cli.py)\n- **Base de datos:** ClickHouse local (base `rag`, tabla `authors_seed_mexico` y `academics_all`)\n\n## CLI Interface\n\n### 1. Búsqueda por Nombre o Apellidos\nGenera automáticamente variantes con y sin guion y busca de forma insensible a mayúsculas:\n```bash\n/home/ambientesPy/revistaslatam/bin/python scripts/openalex_mexico_cli.py search-authors \\\n  --name \"Rafael Torres Córdoba\" \\\n  --limit 20 \\\n  --output /ruta/a/autores_encontrados.json\n```\n\n### 2. Filtrado por Institución y Dependencia\nFiltra por universidad (ej. `UNAM`, `Cinvestav`, `UAM`) o entidad académica:\n```bash\n/home/ambientesPy/revistaslatam/bin/python scripts/openalex_mexico_cli.py search-authors \\\n  --name \"Jiménez Andrade\" \\\n  --institution \"Universidad Nacional Autónoma de México\" \\\n  --limit 10 \\\n  --output /ruta/a/autores_unam.json\n```\n\n### 3. Filtrado por Nivel SNII\nPara consultas de personal académico adscrito al Padrón SNII:\n```bash\n/home/ambientesPy/revistaslatam/bin/python scripts/openalex_mexico_cli.py search-authors \\\n  --snii-level \"III\" \\\n  --institution \"UNAM\" \\\n  --limit 50 \\\n  --output /ruta/a/investigadores_snii3.json\n```\n\n## Workflow Steps\n\n1. **Búsqueda Inicial:** Ejecutar `search-authors` con el nombre del investigador y volcar a archivo JSON.\n2. **Identificación Canónica:** Extraer el `id` OpenAlex (`https://openalex.org/A...`) y el `orcid`.\n3. **Paso a Publicaciones:** Utilizar el nombre o ID obtenido para alimentar la skill [`openalex-mexico-works-search`](file:///mnt/expansion/desplegados/sos-mcp-services/.agents/skills/openalex-mexico-clickhouse/openalex-mexico-works-search/SKILL.md).\n\n## References\n\n- [Esquema de Tablas de Autores en ClickHouse](references/academics_all_schema.md)\n- [Reglas de Permutación de Nombres Hispanos](references/hispanic_name_permutations.md)\n\n## Common Mistakes & Edge Cases\n\n- **No usar JOIN:** Jamás intente cruzar autores con tablas de artículos mediante SQL JOIN; extraiga primero los autores y luego filtre los trabajos por nombre o ROR.\n- **Salida obligatoria:** Siempre especifique `--output` para mantener la memoria del agente limpia.",
     "license": "UNAM LDNL",
     "compatibility": "TlachIA-Hands / Antigravity"
   },
   {
-    "name": "geopolitical-science-mapping",
-    "description": "Experto en cartografía geopolítica de la ciencia, redes de coautoría internacional, monitoreo de vías de Acceso Abierto y alineación con ODS.",
+    "name": "openalex-mexico-institutions",
+    "description": "Consulta y mapeo del catálogo nacional de instituciones, universidades y centros de investigación de México sobre rag.institutions_seed_mexico, resolviendo identificadores ROR, acrónimos institucionales (UNAM, IPN, UAM, Cinvestav), estados y dependencias.",
     "category": "scientometrics",
     "triggers": [
-      "/geopolitical-science-mapping",
-      "cartografía científica",
-      "mapa geopolítico",
-      "colaboración internacional",
-      "acceso abierto",
-      "open access",
-      "ods",
-      "sdg",
-      "geopolitical science",
-      "science mapping"
+      "/openalex-mexico-institutions"
     ],
-    "content": "# Skill: Geopolitical Science Mapping\n\n## 1. Propósito y Activación\nSe activa para analizar la geopolítica de la producción científica, impacto de colaboraciones Norte-Sur / Sur-Sur y compromisos con la Agenda 2030 ONU.\n\n## 2. Protocolo MCP\n1. `topics-research-fronts-engine -> get_geopolitical_collaboration_matrix`: Identificar socios estratégicos (EE.UU., España, Francia, Brasil).\n2. `topics-research-fronts-engine -> get_open_access_transition_data`: Evaluar transición a Acceso Abierto.\n3. `topics-research-fronts-engine -> get_sdg_impact_matrix`: Cuantificar alineación con los 17 ODS.",
+    "content": "# OpenAlex México Institutions\n\nBúsqueda, desambiguación y geolocalización de las instituciones y centros científicos de México en la tabla `rag.institutions_seed_mexico`.\n\n## Overview\n\nFacilita la identificación de universidades públicas y privadas, centros públicos de investigación CONAHCyT e institutos de salud, resolviendo sus códigos ROR oficiales, acrónimos conocidos y dependencias matriz.\n\n## Dependencies\n\n- **Entorno Python:** `/home/ambientesPy/revistaslatam`\n- **Script CLI:** [`scripts/openalex_mexico_cli.py`](file:///mnt/expansion/desplegados/sos-mcp-services/.agents/skills/openalex-mexico-clickhouse/openalex-mexico-institutions/scripts/openalex_mexico_cli.py)\n- **Tabla ClickHouse:** `rag.institutions_seed_mexico`\n\n## CLI Interface\n\n### 1. Búsqueda por Acrónimo\nLocaliza la institución y extrae su ROR canónico:\n```bash\n/home/ambientesPy/revistaslatam/bin/python scripts/openalex_mexico_cli.py get-institution \\\n  --acronym \"UNAM\" \\\n  --limit 5 \\\n  --output /ruta/a/unam_institucion.json\n```\n\n### 2. Búsqueda por Nombre o Texto Libre\n```bash\n/home/ambientesPy/revistaslatam/bin/python scripts/openalex_mexico_cli.py get-institution \\\n  --query \"Instituto Politécnico Nacional\" \\\n  --output /ruta/a/ipn_institucion.json\n```\n\n### 3. Filtrado por Entidad Federativa (Estado)\nRecupera los centros de investigación de un estado determinado:\n```bash\n/home/ambientesPy/revistaslatam/bin/python scripts/openalex_mexico_cli.py get-institution \\\n  --state \"Jalisco\" \\\n  --limit 20 \\\n  --output /ruta/a/instituciones_jalisco.json\n```\n\n### 4. Consulta Directa por Identificador ROR\n```bash\n/home/ambientesPy/revistaslatam/bin/python scripts/openalex_mexico_cli.py get-institution \\\n  --ror \"01tmp8f25\" \\\n  --output /ruta/a/institucion_detalle.json\n```\n\n## Workflow de Vinculación\n\n1. **Resolver Institución:** Usar `get-institution` para obtener el ROR unívoco (`https://ror.org/...`).\n2. **Consultar Producción:** Alimentar dicho ROR en [`openalex-mexico-works-search`](file:///mnt/expansion/desplegados/sos-mcp-services/.agents/skills/openalex-mexico-clickhouse/openalex-mexico-works-search/SKILL.md) para extraer todas las publicaciones de la universidad.\n3. **Evaluar Indicadores:** Alimentar el ROR en [`openalex-mexico-aggregations`](file:///mnt/expansion/desplegados/sos-mcp-services/.agents/skills/openalex-mexico-clickhouse/openalex-mexico-aggregations/SKILL.md) para calcular su cuota OA y gasto en APC.\n\n## References\n\n- [Catálogo de Principales Instituciones Mexicanas y Códigos ROR](references/institutions_mexico_catalog.md)\n\n## Common Mistakes & Edge Cases\n\n- **Múltiples Campus:** Universidades con sedes múltiples (ej. Tec de Monterrey, UAM) pueden reportar campus específicos; el campo `parent_name` permite rastrear la institución matriz.",
     "license": "UNAM LDNL",
     "compatibility": "TlachIA-Hands / Antigravity"
   },
   {
-    "name": "graphrag-scientific-intelligence",
-    "description": "Experto en consultas híbridas GraphRAG cruzando el Grafo de Conocimiento Neo4j, búsqueda vectorial en Qdrant y el Padrón Oficial SNII.",
+    "name": "openalex-mexico-query-architect",
+    "description": "Asesor técnico y validador de consultas ClickHouse sobre el corpus científico de México, asegurando la regla estricta de CERO JOINs, uso de funciones de arrays nativos (has, arrayExists) y optimización columnar sobre rag.works_academic_all.",
     "category": "scientometrics",
     "triggers": [
-      "/graphrag-scientific-intelligence",
-      "graphrag",
-      "grafo de conocimiento",
-      "knowledge graph",
-      "snii",
-      "perfil de investigador",
-      "researcher profile",
-      "neo4j",
-      "qdrant",
-      "búsqueda semántica",
-      "semantic search"
+      "/openalex-mexico-query-architect"
     ],
-    "content": "# Skill: GraphRAG Scientific Intelligence\n\n## 1. Propósito y Activación\nSe activa para responder preguntas complejas sobre investigadores, colaboraciones institucionales y proyectos de la UNAM y México.\n\n## 2. Protocolo de Razonamiento Híbrido\n1. **Búsqueda Vectorial:** `sinapsisai-graphrag-engine -> search_scientific_papers_semantic`.\n2. **Exploración de Grafo:** `sinapsisai-graphrag-engine -> query_knowledge_graph_cypher` para navegar relaciones `[:COAUTHORED_WITH]`, `[:AFFILIATED_WITH]`, `[:ALIGNED_WITH_SDG]`.\n3. **Validación SNII:** `sinapsisai-graphrag-engine -> resolve_snii_identity` y `get_researcher_profile` para confirmar nivel y vigencia oficial.",
+    "content": "# OpenAlex México Query Architect\n\nConsultor metodológico y de seguridad para la formulación de consultas analíticas de alto rendimiento sobre las tablas materializadas de México en ClickHouse.\n\n## Overview\n\nClickHouse aloja más de 1.65 millones de registros detallados para México en `rag.works_academic_all` y 2.57 millones de autores en `rag.authors_seed_mexico`. Esta habilidad actúa como el guardián de rendimiento y buenas prácticas de ingeniería de datos, verificando que el agente nunca formule sentencias con `JOIN` que degraden la infraestructura.\n\n## Regla de Oro: Prohibición Estricta de JOINs\n\n> [!CAUTION]\n> En la infraestructura analítica de la UNAM, **queda terminantemente prohibido formular sentencias con `JOIN` directo** en ClickHouse sin autorización previa. \n> Cualquier consulta que contenga la palabra clave `JOIN` será interceptada y rechazada automáticamente por el motor de validación.\n\n## ¿Por qué no se necesitan JOINs en la producción de México?\n\nLa base de datos `rag` cuenta con una arquitectura columnar totalmente desnormalizada donde cada trabajo en `rag.works_academic_all` ya incluye:\n1. **Autores:** `author_names` (Array de nombres completos).\n2. **Afiliaciones:** `institution_names` y `institution_rors` (Arrays de nombres y códigos ROR).\n3. **Temas y Clasificaciones:** `topic`, `subfield`, `field`, `domain`, `primary_topic_id`.\n4. **Métricas de Impacto:** `fwci`, `percentile`, `is_top_10`, `is_top_1`.\n5. **Acceso Abierto y Costos:** `oa_status`, `is_oa`, `apc_paid_usd`, `apc_list_usd`.\n6. **Objetivos de Desarrollo:** `sdg_ids`, `sdgs`.\n\n## Patrones de Consulta Seguros (Equivalentes a JOINs)\n\n### 1. Filtrar trabajos por institución\nEn lugar de: `SELECT * FROM works w JOIN institutions i ON ... WHERE i.ror = '...'`  \n**Utilizar:**\n```sql\nSELECT title, publication_year, cited_by_count\nFROM rag.works_academic_all\nWHERE has(institution_rors, 'https://ror.org/01tmp8f25')\n```\n\n### 2. Filtrar trabajos por autor\nEn lugar de: `SELECT * FROM works w JOIN authors a ON ... WHERE a.name = '...'`  \n**Utilizar:**\n```sql\nSELECT title, publication_year, cited_by_count\nFROM rag.works_academic_all\nWHERE arrayExists(x -> positionCaseInsensitiveUTF8(x, 'Torres Córdoba') > 0, author_names)\n```\n\n### 3. Agregaciones directas sin cruces\n```sql\nSELECT oa_status, count(*) as total, round(sum(apc_paid_usd), 2) as gasto_usd\nFROM rag.works_academic_all\nWHERE publication_year >= 2020\nGROUP BY oa_status\n```\n\n## Validación Previa de Consultas\nPara comprobar si una sentencia SQL cumple con las directivas de seguridad antes de ejecutarla:\n```bash\n/home/ambientesPy/revistaslatam/bin/python shared_scripts/openalex_mexico_cli.py validate-query \\\n  --query \"SELECT * FROM rag.works_academic_all WHERE publication_year = 2024\" \\\n  --output /ruta/a/reporte_validacion.json\n```\n\n## References\n\n- [Catálogo de Patrones de Consulta Seguros para México](references/no_joins_mexico_patterns.md)",
     "license": "UNAM LDNL",
     "compatibility": "TlachIA-Hands / Antigravity"
   },
   {
-    "name": "infotlachia-scholar-intelligence",
-    "description": "Diccionario exhaustivo de inteligencia bibliométrica de Info TlachIA (DuckDB analytics_cache, Padrón SNII 2025, 4 niveles de agregación, APC estimado, Gini temático, UMAP 2D/3D y Parquets analíticos).",
+    "name": "openalex-mexico-semantic-search",
+    "description": "Búsqueda semántica y conceptual de publicaciones científicas e investigadoras/es en México usando embeddings vectoriales nomic de 768 dimensiones en ClickHouse (rag.works_academic_all y rag.academics_all), con desambiguación automática de autores nacionales frente a colaboradores internacionales.",
     "category": "scientometrics",
     "triggers": [
-      "/infotlachia-scholar-intelligence",
-      "infotlachia",
-      "analytics cache",
-      "padrón snii",
-      "snii 2025",
-      "apc estimado",
-      "gini temático",
-      "umap",
-      "parquet analítico"
+      "/openalex-mexico-semantic-search"
     ],
-    "content": "# Skill: Info TlachIA Scholar Intelligence\n\n## 1. Alcance y Niveles de Agregación\nSe activa para cualquier consulta sobre investigadores de México, dependencias de la UNAM, instituciones nacionales o análisis global del padrón SNII.\n\n### Los 4 Niveles de Granularidad:\n1. **Nivel 1 (Investigador):** Identificación canónica en Padrón SNII 2025 (20,333 investigadores). Datos: Nivel (Candidato, 1, 2, 3, Emérito), Área de Conocimiento (I a IX), Institución y Subdependencia de Acreditación, ORCID verificado, Scopus Author ID y OpenAlex Author ID.\n2. **Nivel 2 (Dependencia):** Subdependencias académicas (ej. Facultad de Ciencias, Instituto de Física, ICN, FES Iztacala). Métricas agregadas y coautorías internas.\n3. **Nivel 3 (Institución):** Universidades y Centros Públicos de Investigación (UNAM, CINVESTAV, UAM, IPN, ITESM, etc.) vinculados mediante identificador canónico ROR.\n4. **Nivel 4 (México / Nacional):** Producción agregada del país en ClickHouse (`works_flat` con 569M de papers y `works_academic_all` con papers de autores en México).\n\n---\n\n## 2. Indicadores y Métricas Precalculadas Disponibles\n* **FWCI (Field-Weighted Citation Impact):** Citas normalizadas por campo, tipo de documento y año (1.0 = promedio mundial).\n* **Excelencia (% Top 10%):** Proporción de artículos en el 10% más citado a nivel mundial.\n* **Desglose de Acceso Abierto (6 Vías):**\n  * **Diamante:** Revistas no comerciales sin cobro por publicar ni leer ($0 APC).\n  * **Gold APC:** Revistas de acceso abierto comerciales con cobro de procesamiento de artículo.\n  * **Hybrid:** Artículos abiertos dentro de revistas de suscripción cerrada.\n  * **Bronze:** Acceso libre en la web del editor sin licencia abierta formal.\n  * **Green:** Autoarchivo en repositorios institucionales/temáticos.\n  * **Closed:** Acceso cerrado tradicional.\n* **Gasto Estimado en APC (USD):** Monto total acumulado pagado a editoriales comerciales por concepto de Article Processing Charges.\n* **Índice de Gini Temático:** Concentración vs. dispersión disciplinar (cercano a 0 = hiper-especializado; cercano a 1 = alta diversidad interdisciplinaria).\n* **Posicionamiento UMAP:** Coordenadas 2D/3D para ubicar al investigador frente a sus pares del mismo nivel y área.\n\n---\n\n## 3. Manejador de Base de Datos Embebido: DuckDB (`analytics_cache.duckdb`)\nUbicación: `/home/sinapsisai/data/analytics_cache.duckdb` (4.97 GB).\nConsultas SQL ultrarrápidas (< 5ms) mediante la herramienta `query_duckdb_analytics(sql_query)`.\n\n### Columnas Canónicas de Filtrado en DuckDB:\n* `db_level`: `'NATIONAL'`, `'INSTITUTION'`, `'ENTITY'` o `'RESEARCHER'`.\n* `db_institution_name`: Nombre de la institución (ej. `'UNIVERSIDAD NACIONAL AUTONOMA DE MEXICO (UNAM)'`).\n* `db_entity_name`: Nombre de la dependencia o facultad (ej. `'FACULTAD DE CIENCIAS'`).\n* `db_academic_name`: Nombre oficial del investigador en formato `'APELLIDO PATERNO MATERNO, NOMBRES'`.\n* `db_view_mode`: `'capacidad_instalada'` o `'produccion_institucional'`.\n\n### Las 14 Tablas Consolidadas:\n1. `institucion_annual` (63k filas): Series temporales anuales de instituciones.\n2. `institucion_total` (3k filas): Totales acumulados por institución.\n3. `investigador_annual` (409k filas): Series anuales por investigador SNII.\n4. `investigador_total` (90k filas): Totales consolidados por investigador (H-index, FWCI, citas, docs).\n5. `investigador_recent` (43k filas): Producción de los últimos 3 años.\n6. `papers_profesor` (1.25M filas): Artículos por investigador con DOI, citas, año y topics.\n7. `papers_institucion` (4.22M filas): Artículos completos indexados por institución.\n8. `topics_institucion` (223k filas): Tópicos por institución y facultad.\n9. `topics_investigador` (377k filas): Tópicos clasificados por investigador.\n10. `keywords_institucion` (1.11M filas): Palabras clave agregadas por institución.\n11. `keywords_investigador` (3.73M filas): Palabras clave por investigador.\n12. `thematic_evolution_institucion` (949k filas): Evolución temática temporal institucional.\n13. `thematic_evolution_investigador` (819k filas): Evolución temática temporal por investigador.\n14. `umap_investigadores` (18.7k filas): Coordenadas UMAP 2D del Padrón Nacional.\n\n---\n\n## 4. Fuentes ClickHouse Masivas\n* `works_academic_all`: Tabla materializada con 1,652,927 artículos de académicos de México.\n* `works_flat`: 569,000,000 de trabajos globales de OpenAlex.",
+    "content": "# OpenAlex México Semantic Search\n\nBúsqueda semántica basada en embeddings vectoriales de 768 dimensiones (`text-embedding-nomic-ai-nomic-embed-text-v2-moe`) y similitud coseno en ClickHouse sobre el acervo científico de México.\n\n## Overview\n\nA diferencia de las búsquedas léxicas por coincidencia exacta de texto, esta skill permite:\n1. **Descubrir trabajos conceptualmente afines:** Aunque el título no contenga las palabras exactas o esté redactado en inglés/español (ej. \"materiales catódicos para baterías de litio\" encuentra cupratos de litio y modelos electroquímicos).\n2. **Identificar perfiles de investigadores especialistas:** Búsqueda vectorial sobre la masa crítica de investigadores en México (`rag.academics_all`).\n3. **Desambiguar coautoría internacional:** Separa automáticamente en los resultados a las investigadoras y los investigadores adscritos a instituciones de México (`mexican_affiliated_authors`) de los colaboradores extranjeros (`international_collaborators`), resolviendo además los IDs de OpenAlex a nombres legibles.\n4. **Respeto estricto a CERO JOINs:** Toda la recuperación vectorial y enriquecimiento de metadatos se ejecuta en subsegundos mediante escaneo columnar directo y `WHERE id IN (...)`.\n\n## Dependencies\n\n- **Entorno Python:** `/home/ambientesPy/revistaslatam`\n- **Script CLI:** [`scripts/openalex_mexico_cli.py`](file:///mnt/expansion/desplegados/sos-mcp-services/.agents/skills/openalex-mexico-clickhouse/openalex-mexico-semantic-search/scripts/openalex_mexico_cli.py)\n- **Servidor de Embeddings:** LM Studio local (`http://127.0.0.1:1234/v1` en host / `http://172.17.0.1:1234/v1` en contenedor Docker)\n- **Tablas ClickHouse:** `rag.works_academic_all` (1.37M publicaciones con `embedding_nomic`), `rag.academics_all` (9.1K perfiles con `embedding_nomic`), `rag.authors_seed_mexico` (2.57M autores).\n\n## CLI Interface\n\n### 1. Búsqueda Semántica de Publicaciones\nRecupera artículos conceptualmente afines a una temática en lenguaje natural (español o inglés):\n```bash\n/home/ambientesPy/revistaslatam/bin/python scripts/openalex_mexico_cli.py semantic-search \\\n  --query \"materiales catódicos para baterías de litio\" \\\n  --target works \\\n  --limit 20 \\\n  --output /ruta/a/articulos_semanticos_litio.json\n```\n\nFiltros opcionales combinables:\n- `--year-min 2020` / `--year-max 2025`\n- `--oa-status diamond` (o gold, hybrid, etc.)\n- `--is-top-10 true`\n- `--institution-name \"Universidad Nacional Autónoma de México\"`\n\n### 2. Búsqueda Semántica de Investigadores Especialistas\nDescubre investigadores de México cuyo perfil temático coincide vectorialmente con una disciplina o problema:\n```bash\n/home/ambientesPy/revistaslatam/bin/python scripts/openalex_mexico_cli.py semantic-search \\\n  --query \"procesamiento de lenguaje natural y modelos de lenguaje\" \\\n  --target authors \\\n  --limit 15 \\\n  --output /ruta/a/expertos_pln_mexico.json\n```\n\n### 3. Interpretación de Autores y Coautoría\nEn los resultados en formato JSON devueltos para cada publicación:\n- `authors_disambiguated.mexican_affiliated_authors`: Contiene a los autores que poseen adscripción formal o historial en instituciones mexicanas (UNAM, IPN, UAM, Cinvestav, etc.).\n- `authors_disambiguated.international_collaborators`: Contiene a los coautores adscritos a universidades extranjeras que colaboraron en el estudio.\n- `cosine_distance`: Mide la distancia angular (menor valor = mayor cercanía conceptual).\n- `semantic_similarity`: Medida normalizada entre 0.0 y 1.0 (`1.0 - cosine_distance`).\n\n## Directrices para el Agente (LLM)\n\n1. **Cuando el usuario pregunte por conceptos complejos o preguntas abiertas:** Usa `semantic-search` en lugar de una búsqueda por coincidencia estricta de palabras clave (`search-works`).\n2. **Cuando menciones investigadores de México a partir de un paper:** Revisa siempre `mexican_affiliated_authors` para reportar a los especialistas nacionales y no atribuir la afiliación mexicana a coautores internacionales.\n3. **Para rankings cuantitativos globales por volumen de publicaciones en un tema:** Complementa con `top-entities --by authors` de la skill [`openalex-mexico-aggregations`](file:///mnt/expansion/desplegados/sos-mcp-services/.agents/skills/openalex-mexico-clickhouse/openalex-mexico-aggregations/SKILL.md).",
     "license": "UNAM LDNL",
     "compatibility": "TlachIA-Hands / Antigravity"
   },
   {
-    "name": "journal-editorial-intelligence",
-    "description": "Experto en evaluación cienciométrica de revistas científicas iberoamericanas, Acceso Abierto Diamante, indexación DOAJ/SciELO y multilingüismo.",
+    "name": "openalex-mexico-visualizer",
+    "description": "Generador de artefactos visuales interactivos y dashboards analíticos (HTML con Plotly.js, Redes PyVis y Tarjetas PNG) a partir de los datos cienciométricos extraídos por las skills del ecosistema OpenAlex México.",
     "category": "scientometrics",
     "triggers": [
-      "/journal-editorial-intelligence",
-      "evaluación de revista",
-      "journal evaluation",
-      "revistas científicas",
-      "acceso abierto diamante",
-      "diamond open access",
-      "doaj",
-      "scielo",
-      "latindex",
-      "redalyc",
-      "indexación editorial"
+      "/openalex-mexico-visualizer"
     ],
-    "content": "# Skill: Journal Editorial Intelligence\n\n## 1. Propósito y Activación\nSe activa para evaluar el desempeño e impacto de revistas científicas, políticas de Acceso Abierto y soberanía editorial.\n\n## 2. Indicadores Clave\n- **FWCI de Revista:** Citas ponderadas por campo y año.\n- **Vía de Acceso Abierto:** Distinción crítica entre Diamante (universitario sin cobro de APC) y Gold comercial.\n- **Multilingüismo:** Balance de artículos en español, portugués e inglés.\n\n## 3. Protocolo MCP\n- `revistaslatam-journals-engine -> get_journal_impact_profile`\n- `revistaslatam-journals-engine -> compare_journals_benchmarking`\n- `revistaslatam-journals-engine -> analyze_country_editorial_landscape`",
+    "content": "# OpenAlex México Visualizer\n\nCapa de presentación y motor de generación de artefactos visuales interactivos para la producción científica mexicana.\n\n## Overview\n\nTransforma los resultados analíticos en formato JSON generados por las skills de datos (`openalex-mexico-aggregations`, `openalex-mexico-semantic-search`, `openalex-mexico-works-search`, etc.) en:\n1. **Dashboards Ejecutivos HTML:** Archivos autocontenidos con tarjetas de KPIs, gráficos interactivos de Plotly.js y tablas dinámicas listos para el panel de vista previa.\n2. **Series Temporales Duales:** Publicaciones anuales combinadas con la evolución cronológica del FWCI relativo al benchmark mundial (1.00).\n3. **Donuts de Acceso Abierto:** Distribución de las 6 modalidades (Diamante vs Comercial) y cuantificación del gasto en APC.\n4. **Rankings de Capacidad:** Barras horizontales interactivas con desambiguación y banderas de afiliación mexicana.\n5. **Tarjetas Estáticas PNG:** Gráficas compactas listas para incrustarse directamente en el chat.\n\n## Dependencies\n\n- **Entorno Python:** `/home/ambientesPy/revistaslatam`\n- **Script CLI:** [`scripts/openalex_visualizer_cli.py`](file:///mnt/expansion/desplegados/sos-mcp-services/.agents/skills/openalex-mexico-clickhouse/openalex-mexico-visualizer/scripts/openalex_visualizer_cli.py)\n- **Librerías principales:** `plotly`, `matplotlib`, `pyvis`\n\n## CLI Interface\n\n### 1. Generación Automática (Detección Inteligente)\nEl visualizador detecta la estructura interna del JSON (`top_entities`, `grouped_by`, `works`, etc.) y renderiza el artefacto correspondiente:\n```bash\n/home/ambientesPy/revistaslatam/bin/python scripts/openalex_visualizer_cli.py \\\n  --input /ruta/a/datos.json \\\n  --title \"Análisis Cienciométrico de Litio en México\" \\\n  --output /ruta/a/artefacto_interactivo.html \\\n  --png /ruta/a/tarjeta_chat.png\n```\n\n### 2. Forzar un Tipo de Visualización Específico\nTipos disponibles (`--type`):\n- `top-ranking`: Para listas de autores o instituciones ordenadas por impacto o producción.\n- `timeseries`: Para series temporales anuales con línea dual de FWCI y publicaciones.\n- `oa-donut`: Para gráficos de proporción de vías de Acceso Abierto y gasto APC en USD.\n- `dossier-works`: Para catálogos de publicaciones con desglose de coautoría internacional.\n- `network`: Para redes interactivas de colaboración científica.\n\n```bash\n/home/ambientesPy/revistaslatam/bin/python scripts/openalex_visualizer_cli.py \\\n  --input /ruta/a/agregacion_oa.json \\\n  --type oa-donut \\\n  --title \"Distribución de Acceso Abierto y Gasto en APC\" \\\n  --output /ruta/a/reporte_oa.html\n```\n\n## Directrices para el Agente (LLM)\n\n1. **Flujo en Dos Fases:**\n   - **Fase 1 (Cómputo):** Obtén los datos crudos ejecutando la skill de datos idónea (`aggregations`, `semantic-search`, etc.) y guarda el resultado en `/tmp/datos.json` o en `workspace/`.\n   - **Fase 2 (Visualización):** Invoca `openalex-mexico-visualizer` apuntando a dicho JSON para generar el archivo `.html`.\n2. **Presentación de la Respuesta al Usuario:**\n   - Proporciona tu resumen analítico cuantitativo en texto sobrio.\n   - Si generaste una tarjeta PNG con `--png`, inclúyela en el chat: `![Gráfica](/ruta/a/tarjeta.png)`.\n   - Ofrece el enlace clickable al artefacto interactivo completo: `[Abrir Dashboard Interactivo](file:///ruta/a/artefacto.html)`.",
     "license": "UNAM LDNL",
     "compatibility": "TlachIA-Hands / Antigravity"
   },
   {
-    "name": "knomap-unified-orchestrator",
-    "description": "Orquestador integral del ecosistema UNAM; coordina pipelines multi-fase desde extracción de datos masivos hasta modelado topológico y reportes.",
+    "name": "openalex-mexico-works-search",
+    "description": "Recuperación y extracción de publicaciones científicas de México sobre la tabla materializada rag.works_academic_all (1.65M de trabajos), filtrando por institución ROR, autor, rango de años, vía de acceso abierto (Diamond, Gold, Hybrid) y percentiles de impacto Top 10% y Top 1%.",
     "category": "scientometrics",
     "triggers": [
-      "/knomap-unified-orchestrator",
-      "knomap",
-      "análisis bibliométrico",
-      "estudio bibliométrico",
-      "bibliometric analysis",
-      "bibliometric study",
-      "bibliometría",
-      "análisis de publicaciones",
-      "análisis de producción científica",
-      "producción científica",
-      "estudio cienciométrico",
-      "cienciometría",
-      "facultad de ciencias",
-      "unam",
-      "institución",
-      "universidad"
+      "/openalex-mexico-works-search"
     ],
-    "content": "# Skill: knoMap Unified Orchestrator\n\n## 1. Propósito y Activación\nSe activa cuando el usuario formula una meta de investigación integral (por ejemplo: \"Analizar el estado de la Inteligencia Artificial en la UNAM durante los últimos 10 años\").\n\n## 2. Flujo de Orquestación en 5 Fases\n1. **Fase 1 (Datos):** Extraer corpus y autores con `openalex-clickhouse-gateway`.\n2. **Fase 2 (Validación Social/SNII):** Cruzar autores con `sinapsisai-graphrag-engine` y verificar padrón SNII.\n3. **Fase 3 (Leyes y Frentes):** Ajustar Ley de Lotka con `plmetrix-laws-engine` y detectar frentes con `topics-research-fronts-engine`.\n4. **Fase 4 (Topología SOM):** Reducir a espacio intrínseco y entrenar mapa de Kohonen con `knomap-som-engine`.\n5. **Fase 5 (Síntesis):** Generar reporte con hallazgos, fortalezas, brechas y recomendaciones de política científica.",
-    "license": "UNAM LDNL",
-    "compatibility": "TlachIA-Hands / Antigravity"
-  },
-  {
-    "name": "openalex-search-engineer",
-    "description": "Experto en formulación de consultas sobre OpenAlex ClickHouse local (569M trabajos, 337M autores), tokenización, diacríticos y agregaciones analíticas.",
-    "category": "scientometrics",
-    "triggers": [
-      "/openalex-search-engineer",
-      "openalex",
-      "buscar artículos",
-      "buscar trabajos",
-      "search papers",
-      "clickhouse",
-      "consulta bibliográfica",
-      "open alex"
-    ],
-    "content": "# Skill: OpenAlex Search Engineer\n\n## 1. Propósito y Activación\nEsta skill se activa cuando se requiere buscar, filtrar o agregar información bibliográfica masiva sobre la base de datos local de OpenAlex en ClickHouse.\n\n## 2. Protocolo de Búsqueda y Normalización\n1. **Manejo de Nombres y Diacríticos:**\n   - Para autores hispanos/iberoamericanos, utilizar búsqueda tokenizada insensible a mayúsculas/minúsculas y acentos (`positionCaseInsensitiveUTF8`).\n   - Soportar variantes: \"Torres Córdoba, Rafael\" vs \"Rafael Torres-Córdoba\".\n2. **Identificadores Canónicos:**\n   - Normalizar identificadores removiendo prefijos de URI (`https://openalex.org/A...` -> `A...`).\n   - Priorizar filtrado por ROR institucional (`03rzb4f20` para UNAM) y ORCID.\n3. **Herramientas MCP a Invocar:**\n   - `openalex-clickhouse-gateway -> openalex_search_authors`\n   - `openalex-clickhouse-gateway -> openalex_search_works`\n   - `openalex-clickhouse-gateway -> openalex_get_entity_by_id`\n   - `openalex-clickhouse-gateway -> openalex_aggregate_group_by`\n\n## 3. Heurísticas de Agregación\n- Para tendencias temporales, agrupar por `publication_year`.\n- Para acceso abierto, cruzar con `oa_status` (Gold, Diamond, Green, Hybrid, Bronze, Closed).",
-    "license": "UNAM LDNL",
-    "compatibility": "TlachIA-Hands / Antigravity"
-  },
-  {
-    "name": "research-fronts-detection-expert",
-    "description": "Experto en detección multimodal de frentes de investigación (Research Fronts v5.0), evolución longitudinal con AMI y análisis de linajes temáticos.",
-    "category": "scientometrics",
-    "triggers": [
-      "/research-fronts-detection-expert",
-      "frentes de investigación",
-      "research fronts",
-      "detección temática",
-      "linajes temáticos",
-      "ami",
-      "evolución longitudinal"
-    ],
-    "content": "# Skill: Research Fronts Detection Expert\n\n## 1. Propósito y Activación\nSe activa para descubrir frentes de investigación emergentes en subcampos científicos mediante el pipeline triple.\n\n## 2. Modalidades de Detección\n- **Estructural:** Algoritmo Leiden sobre red de acoplamiento bibliográfico con similitud de Salton $\\ge 0.1$.\n- **Semántica:** Clustering HDBSCAN sobre embeddings SPECTER2.\n- **Topológica:** FastRP sobre el grafo de citas.\n\n## 3. Protocolo MCP\n1. Invocar `topics-research-fronts-engine -> detect_research_fronts_multimodal`.\n2. Invocar `topics-research-fronts-engine -> track_front_evolution_longitudinal` para evaluar persistencia, fusiones y divisiones entre ventanas temporales.",
-    "license": "UNAM LDNL",
-    "compatibility": "TlachIA-Hands / Antigravity"
-  },
-  {
-    "name": "revistaslatam-editorial-intelligence",
-    "description": "Diccionario exhaustivo de Revistas Latam (Catálogo de Revistas Iberoamericanas, evaluación editorial, checklist de indización DOAJ/SciELO/Redalyc/Latindex 2.0, Acceso Abierto Diamante y multilingüismo).",
-    "category": "scientometrics",
-    "triggers": [
-      "/revistaslatam-editorial-intelligence",
-      "revistas latam",
-      "revistas iberoamericanas",
-      "catálogo de revistas",
-      "editorial iberoamericana",
-      "revistaslatam"
-    ],
-    "content": "# Skill: Revistas Latam Editorial Intelligence\n\n## 1. Alcance y Evaluación Editorial Iberoamericana\nSe activa para diagnósticos cienciométricos de revistas científicas, políticas de Acceso Abierto Diamante ($0 APC), indización y visibilidad internacional en América Latina, el Caribe, España y Portugal.\n\n---\n\n## 2. Indicadores y Checklist de Indización\n1. **Acceso Abierto Diamante vs Comercial:**\n   * Monitoreo de gratuidad total (sin cobro al autor ni al lector) frente al modelo APC comercial.\n2. **Matriz de Indización Internacional y Regional:**\n   * Índices globales: Scopus (SJR, Citescore, Cuartil Q1-Q4), Web of Science (JCR, ESCI).\n   * Índices de calidad regional: DOAJ (Directorio de Revistas de Acceso Abierto con Seal), SciELO (Scientific Electronic Library Online), Redalyc (Red de Revistas Científicas de ALyC), Latindex Catálogo 2.0 (cumplimiento de 38 criterios de calidad editorial), Dialnet, MIAR, AmeliCA.\n3. **Métricas de Internacionalización y Calidad:**\n   * Endogamia editorial: Porcentaje de autores y revisores externos a la institución editora.\n   * Internacionalización del Comité Editorial y de los autores firmantes.\n   * Flujo editorial: Días promedio de revisión por pares, tasa de aceptación/rechazo y periodicidad.\n4. **Multilingüismo y Políticas de Autoarchivo:**\n   * Distribución de artículos por idioma (Español, Portugués, Inglés).\n   * Políticas de autoarchivo y derechos de autor registradas en Sherpa Romeo y Diadorim (políticas Verde, Azul, Amarilla, etc.).\n\n---\n\n## 3. Fuentes de Datos y Microservicio\n* `revistaslatam-mcp` (Puerto 8013): Microservicio de consulta editorial y metadatos de revistas.\n* `pipeline_revistaslatam/`: Bases de datos locales de revistas, editoriales y cruces de indexación.",
-    "license": "UNAM LDNL",
-    "compatibility": "TlachIA-Hands / Antigravity"
-  },
-  {
-    "name": "scientometrics-incites-expert",
-    "description": "Experto en benchmarking cienciométrico institucional (Clarivate InCites), perfiles multidimensionales y series temporales multivariadas (PathSOM).",
-    "category": "scientometrics",
-    "triggers": [
-      "/scientometrics-incites-expert",
-      "incites",
-      "clarivate",
-      "benchmarking institucional",
-      "indicadores bibliométricos",
-      "wos",
-      "web of science",
-      "impact factor",
-      "factor de impacto",
-      "h-index",
-      "índice h"
-    ],
-    "content": "# Skill: Scientometrics InCites Expert\n\n## 1. Propósito y Activación\nSe activa al analizar reportes y paquetes de benchmarking InCites (instituciones, autores, departamentos, áreas temáticas).\n\n## 2. Protocolo de Extracción y Normalización\n1. **Inspección:** Invocar `knomap-som-engine -> inspect_incites_package`.\n2. **Ventanas Temporales:**\n   - *Reciente (5 años):* 2021-2025 para evaluación de desempeño actual.\n   - *Histórico:* 1980-2025 para análisis de trayectoria longitudinal.\n3. **Indicadores Clave:**\n   - CNCI (Category Normalized Citation Impact): Impacto normalizado por categoría (Mundial = 1.0).\n   - % Documents in Top 10% / Top 1%: Excelencia científica.\n   - International Collaborations (%): Grado de internacionalización.\n\n## 3. Trayectorias PathSOM y Matriz Estratégica\n- Invocar `get_incites_temporal_evolution` aplicando suavizado ECMA (Moving Average de 3 o 5 periodos).\n- Invocar `compute_strategic_growth_matrix` para clasificar entidades en 4 cuadrantes (Emerging Stars, Star Leaders, Established Giants, Low Priority).",
-    "license": "UNAM LDNL",
-    "compatibility": "TlachIA-Hands / Antigravity"
-  },
-  {
-    "name": "semantic-manifold-expert",
-    "description": "Experto en análisis de variedades semánticas, estimación de dimensión intrínseca local (MLE al percentil 95) y compresión topológica no lineal (UMAP).",
-    "category": "scientometrics",
-    "triggers": [
-      "/semantic-manifold-expert",
-      "dimensión intrínseca",
-      "variedad semántica",
-      "semantic manifold",
-      "mle",
-      "compresión topológica",
-      "umap"
-    ],
-    "content": "# Skill: Semantic Manifold Expert\n\n## 1. Propósito y Activación\nSe activa al procesar textos de artículos científicos (título + resumen + keywords) en espacios vectoriales densos (embeddings SPECTER2/Nomic).\n\n## 2. Metodología de Variedades\n1. **Techo de Información (Percentil 95):**\n   - Estimar la dimensión intrínseca local con MLE (Maximum Likelihood Estimation).\n   - Utilizar el percentil 95 como límite de compresión sin pérdida de topología.\n2. **Protocolo MCP:**\n   - `knomap-som-engine -> generate_document_embeddings`\n   - `knomap-som-engine -> estimate_intrinsic_dimension`\n   - `knomap-som-engine -> reduce_semantic_dimension` (UMAP a espacio intrínseco o 2D)\n   - `knomap-som-engine -> cluster_semantic_documents` (Extracción TF-IDF jerárquica)",
-    "license": "UNAM LDNL",
-    "compatibility": "TlachIA-Hands / Antigravity"
-  },
-  {
-    "name": "som-methodological-expert",
-    "description": "Experto en redes neuronales de Kohonen (SOM), cálculo de tamaño de malla espectral SVD, U-Matrix, calibración de clusters y métricas topológicas.",
-    "category": "scientometrics",
-    "triggers": [
-      "/som-methodological-expert",
-      "som",
-      "kohonen",
-      "mapa auto-organizado",
-      "self-organizing map",
-      "u-matrix",
-      "cluster som",
-      "topología neuronal"
-    ],
-    "content": "# Skill: SOM Methodological Expert\n\n## 1. Propósito y Activación\nSe activa cuando el usuario entrena, calibra o interpreta Mapas Auto-Organizados (Self-Organizing Maps) sobre datos multidimensionales.\n\n## 2. Reglas de Dimensionamiento de Malla\n1. **Ratio Espectral SVD:**\n   - Calcular la descomposición en valores singulares: $\\sigma_1 / \\sigma_2$.\n   - La relación de aspecto de la malla `rows:cols` debe coincidir con este ratio.\n2. **Tamaño de Malla:**\n   - *Small SOM:* $5 \\times \\sqrt{N}$ neuronas (ideal para agrupamiento denso y visualización rápida).\n   - *Big SOM:* $10 \\times N$ neuronas (ideal para análisis topológico continuo y U-Matrix de alta resolución).\n\n## 3. Protocolo de Invocación MCP\n1. Invocar `knomap-som-engine -> suggest_grid_size` pasando la matriz de datos.\n2. Invocar `knomap-som-engine -> train_som` con inicialización PCA y topología hexagonal.\n3. Invocar `knomap-som-engine -> evaluate_som_clusters` para sugerir el K óptimo vía Silhouette Score.\n4. Invocar `knomap-som-engine -> recluster_som` si el usuario ajusta K sin reentrenar.",
-    "license": "UNAM LDNL",
-    "compatibility": "TlachIA-Hands / Antigravity"
-  },
-  {
-    "name": "tlachia-master-index",
-    "description": "Índice maestro always-active con capacidades y contexto bibliométrico de TlachIA-Hands",
-    "category": "scientometrics",
-    "triggers": [],
-    "content": "# TlachIA-Hands: Inteligencia Científica y Bibliométrica\n\nEres un agente de Inteligencia Científica operando dentro del ecosistema TlachIA-Hands. Tu propósito principal es realizar análisis bibliométricos, cienciométricos y mapeos de la ciencia para la UNAM y otras instituciones.\n\n## 🛠️ Herramientas MCP Disponibles\nTienes acceso inmediato a las siguientes herramientas MCP que debes usar directamente para consultas bibliométricas:\n- **`openalex-clickhouse-gateway`**: 569M de artículos científicos locales. Herramientas: `openalex_search_authors`, `openalex_search_works`, `openalex_get_entity_by_id`, `openalex_aggregate_group_by`.\n- **`knomap-som-engine`**: Redes bibliométricas y mapas SOM. Herramientas: `parse_bibliographic_file`, `detect_louvain_communities`, `suggest_grid_size`, `train_som`.\n- **`sinapsisai-graphrag-engine`**: Grafo de conocimiento y padrón SNII. Herramientas: `search_scientific_papers_semantic`, `query_knowledge_graph_cypher`, `resolve_snii_identity`.\n- **`plmetrix-laws-engine`**: Leyes bibliométricas (Lotka, Bradford, Zipf). Herramientas: `analyze_lotka_law`, `analyze_bradford_law`, `analyze_price_index`.\n- **`topics-research-fronts-engine`**: Frentes de investigación y ODS. Herramientas: `get_research_fronts_timeline`, `get_geopolitical_collaboration_matrix`, `get_sdg_impact_matrix`.\n- **`revistaslatam-journals-engine`**: Evaluación de revistas científicas iberoamericanas. Herramientas: `evaluate_journal_diamond_oa`, `check_doaj_scielo_indexing`.\n\n## 📚 Skills Especializados (Metodologías)\nSi el usuario requiere aplicar una metodología completa paso a paso, tú no tienes el contenido metodológico completo aquí. Debes indicarle al usuario que active el Skill correspondiente mediante su comando slash:\n\n- **Orquestación Completa**: `/knomap-unified-orchestrator`\n- **Redes y Coautoría**: `/bibliometric-network-analyst`\n- **Leyes Bibliométricas**: `/classical-bibliometrics-laws`\n- **Geopolítica y ODS**: `/geopolitical-science-mapping`\n- **GraphRAG y Padrón SNII**: `/graphrag-scientific-intelligence`\n- **Frentes de Investigación**: `/research-fronts-detection-expert`\n- **Búsquedas OpenAlex**: `/openalex-search-engineer`\n- **Evaluación de Revistas**: `/journal-editorial-intelligence`\n- **Mapas Neuronales (SOM)**: `/som-methodological-expert`\n\n**Regla de Oro:** Siempre que te pidan un análisis (ej: \"Busca los artículos de la UNAM en IA\"), procede a usar tus herramientas MCP inmediatamente sin dudar. Si el usuario pide *aplicar la metodología completa*, recomiéndale usar el slash command correspondiente.",
-    "license": "UNAM LDNL",
-    "compatibility": "TlachIA-Hands / Antigravity"
-  },
-  {
-    "name": "topics-research-fronts-intelligence",
-    "description": "Diccionario exhaustivo de Topics & Research Fronts v5.0 (Linajes aluviales AMI, coautoría internacional país-país, cuadrantes geopolíticos, jerarquía taxonómica Sunburst y alineación con ODS 1-17).",
-    "category": "scientometrics",
-    "triggers": [
-      "/topics-research-fronts-intelligence",
-      "topics & research fronts",
-      "linajes aluviales",
-      "sunburst",
-      "cuadrantes geopolíticos",
-      "frentes por país"
-    ],
-    "content": "# Skill: Topics & Research Fronts Intelligence\n\n## 1. Alcance y Motor de Frentes de Investigación v5.0\nSe activa para análisis de frentes de investigación, linajes temáticos longitudinales, diplomacia científica internacional y evaluación de impacto en Desarrollo Sostenible (ODS).\n\n---\n\n## 2. Indicadores y Visualizaciones Precalculadas Disponibles\n1. **Linajes Longitudinales (Métrica AMI - Adjusted Mutual Information):**\n   * Rastreo temporal de frentes en ventanas móviles ($T_1, T_2, \\dots, T_k$).\n   * Detección de dinámicas: Persistencia (estabilidad), División (*splits*), Fusión (*merges*) y Emergencia de micro-frentes nuevos.\n2. **Mapa Coroplético y Red de Coautoría Internacional (`_collab.parquet`):**\n   * Matriz de coautorías internacionales (`country_a`, `country_b`, `count`).\n   * Red topológica mundial por regiones (América del Norte, Europa, Latinoamérica, Asia-Pacífico).\n3. **Cuadrantes de Posicionamiento Geopolítico:**\n   * Scatter plot: Eje X: $\\log(\\text{Producción})$, Eje Y: FWCI promedio, Tamaño: % Top 10% (Excelencia).\n   * Clasificación en 4 cuadrantes: Líderes consolidados, Productores masivos, Nichos de excelencia y Emergentes.\n4. **Composición Taxonómica Jerárquica (Sunburst):**\n   * Estructura arbórea: `Domain` $\\rightarrow$ `Field` $\\rightarrow$ `Subfield` $\\rightarrow$ `Topic` para medir concentración disciplinar.\n5. **Alineación con Objetivos de Desarrollo Sostenible (ODS 1 al 17):**\n   * Mapeo de publicaciones por institución/país vinculadas a las metas de la ONU (`_inst.parquet`, `sdg_docs`).\n\n---\n\n## 3. Fuentes de Datos Locales\n* `data/cache_temas/`: Tablas parquet agregadas por subcampo, país e institución.\n* `_collab.parquet`: Pares de colaboración internacional.\n* `_inst.parquet`: Desempeño institucional y desglose ODS.",
+    "content": "# OpenAlex México Works Search\n\nRecuperación granular de artículos, actas y capítulos de la producción científica vinculada a México almacenados en la tabla materializada `rag.works_academic_all`.\n\n## Overview\n\nPermite consultar los 1,652,927 trabajos de México con indicadores cienciométricos enriquecidos (FWCI, percentiles, Top 10%, APC pagado, vías de acceso abierto y ODS), aplicando filtros optimizados sin necesidad de formular cruces relacionales.\n\n## Dependencies\n\n- **Entorno Python:** `/home/ambientesPy/revistaslatam`\n- **Script CLI:** [`scripts/openalex_mexico_cli.py`](file:///mnt/expansion/desplegados/sos-mcp-services/.agents/skills/openalex-mexico-clickhouse/openalex-mexico-works-search/scripts/openalex_mexico_cli.py)\n- **Tabla ClickHouse:** `rag.works_academic_all`\n\n## CLI Interface\n\n### 1. Búsqueda por Institución (ROR) y Rango Temporal\nRecupera la producción de una institución (ej. UNAM: `01tmp8f25`, Cinvestav: `04yeehy64`) en un periodo definido:\n```bash\n/home/ambientesPy/revistaslatam/bin/python scripts/openalex_mexico_cli.py search-works \\\n  --institution-ror \"01tmp8f25\" \\\n  --year-min 2023 \\\n  --year-max 2025 \\\n  --limit 200 \\\n  --output /ruta/a/produccion_unam_reciente.json\n```\n\n### 2. Búsqueda de Publicaciones de Élite (Top 10% / Top 1%)\nFiltra artículos en el decil superior de impacto mundial:\n```bash\n/home/ambientesPy/revistaslatam/bin/python scripts/openalex_mexico_cli.py search-works \\\n  --is-top-10 true \\\n  --year-min 2020 \\\n  --limit 100 \\\n  --output /ruta/a/articulos_top10_mexico.json\n```\n\n### 3. Filtrado por Acceso Abierto Diamante vs Doradas\nPara análisis de soberanía editorial y vías no comerciales:\n```bash\n/home/ambientesPy/revistaslatam/bin/python scripts/openalex_mexico_cli.py search-works \\\n  --oa-status \"diamond\" \\\n  --year-min 2024 \\\n  --limit 100 \\\n  --output /ruta/a/articulos_diamante_2024.json\n```\n\n### 4. Búsqueda por Tópico o Término\n```bash\n/home/ambientesPy/revistaslatam/bin/python scripts/openalex_mexico_cli.py search-works \\\n  --query \"quantum dots\" \\\n  --topic \"Nanotechnology\" \\\n  --limit 50 \\\n  --output /ruta/a/nanotecnologia_mexico.json\n```\n\n## Workflow Steps\n\n1. **Definir Filtros:** Seleccionar institución, año, tipo de acceso o nivel de impacto.\n2. **Ejecutar Búsqueda:** Correr `search-works` enviando la salida a JSON.\n3. **Flujos Posteriores:**\n   - Para cálculo de indicadores agregados: usar [`openalex-mexico-aggregations`](file:///mnt/expansion/desplegados/sos-mcp-services/.agents/skills/openalex-mexico-clickhouse/openalex-mexico-aggregations/SKILL.md).\n   - Para modelado en redes: alimentar [`bibliometric-network-analyst`](file:///mnt/expansion/desplegados/sos-mcp-services/.agents/skills/scientometrics-network/bibliometric-network-analyst/SKILL.md).\n\n## References\n\n- [Diccionario de Campos de rag.works_academic_all](references/works_academic_all_schema.md)\n\n## Common Mistakes & Edge Cases\n\n- **Formato del ROR:** Puede pasar el ROR en formato corto (`01tmp8f25`) o URI completa (`https://ror.org/01tmp8f25`), el script resuelve ambas automáticamente.\n- **Volumen de Datos:** Para descargas masivas de más de 5,000 registros, aumente el `--limit` de forma prudente para evitar sobrecargar la memoria local.",
     "license": "UNAM LDNL",
     "compatibility": "TlachIA-Hands / Antigravity"
   }
